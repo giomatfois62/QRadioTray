@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(QTrayIcon LANGUAGES CXX)
+project(QRadioTray LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
