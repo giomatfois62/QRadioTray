@@ -6,6 +6,11 @@
 #include <QMediaPlayer>
 #include <QTimer>
 
+struct RadioStation {
+    QString name;
+    QString url;
+};
+
 class TrayWidget : public QSystemTrayIcon
 {
     Q_OBJECT
@@ -25,5 +30,6 @@ private:
     QMediaPlayer m_player;
     QTimer m_timer;
     QString m_currentSong;
+    QVector<RadioStation> m_stations;
 };
 #endif // TRAYWIDGET_H

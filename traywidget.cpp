@@ -2,37 +2,16 @@
 
 #include <QMenu>
 #include <QApplication>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QFile>
 #include <QDebug>
-
-
-struct RadioStation {
-    QString name;
-    QString url;
-};
-
-QVector<RadioStation> stations = {
-    {"Groove Salad", "http://ice4.somafm.com/groovesalad-128-mp3"},
-    {"Boot Liquor", "http://ice4.somafm.com/bootliquor-128-mp3"},
-    {"Heavyweight Reggae", "http://ice2.somafm.com/reggae-128-mp3"},
-    {"Groove Salad Classic", "http://ice6.somafm.com/gsclassic-128-mp3"},
-    {"DEF CON Radio", "http://ice2.somafm.com/defcon-128-mp3"},
-    {"Seven Inch Soul", "http://ice2.somafm.com/7soul-128-mp3"},
-    {"Left Coast 70s", "http://ice2.somafm.com/seventies-128-mp3"},
-    {"Underground 80s", "http://ice6.somafm.com/u80s-128-mp3"},
-    {"Secret Agent", "http://ice6.somafm.com/secretagent-128-mp3"},
-    {"Lush", "http://ice2.somafm.com/lush-128-aac"},
-    {"Fluid", "http://ice2.somafm.com/fluid-128-mp3"},
-    {"Illinois Street Lounge", "http://ice2.somafm.com/illstreet-128-mp3"},
-    {"Suburbs of Goa", "http://ice6.somafm.com/suburbsofgoa-128-mp3"},
-    {"Metal Detector", "http://ice6.somafm.com/metal-128-mp3"},
-    {"Black Rock FM", "http://ice2.somafm.com/brfm-128-mp3"}
-};
 
 TrayWidget::TrayWidget(QObject *parent)
     : QSystemTrayIcon(parent),
       m_player(this, QMediaPlayer::StreamPlayback)
 {
-    setIcon(QIcon("/home/mat/Radio-icon-white.png"));
+    setIcon(QIcon(":/icons/Radio-icon-white.png"));
 
     m_contextMenu = new QMenu;
 
@@ -64,9 +43,27 @@ TrayWidget::TrayWidget(QObject *parent)
 
     m_radioMenu->addSeparator();
 
-    for (RadioStation &station : stations) {
-        m_radioMenu->addAction(station.name,  [this, station](bool) {
-            m_player.setMedia(QUrl(station.url));
+    QSettings settings;
+
+    for(QString &group : settings.childGroups()) {
+        settings.beginGroup(group);
+
+        RadioStation station;
+        station.name = settings.value("name").toString();
+        station.url = settings.value("url").toString();
+
+        qDebug() << group << " " << station.name << " - " << station.url;
+
+        if (!station.name.isEmpty() && !station.url.isEmpty())
+            m_stations.push_back(station);
+
+        settings.endGroup();
+    }
+
+
+    for (int i = 0; i < m_stations.size(); ++i) {
+        m_radioMenu->addAction(m_stations[i].name,  [=](bool) {
+            m_player.setMedia(QUrl(m_stations[i].url));
             m_player.setVolume(50);
             m_player.play();
 
@@ -75,17 +72,17 @@ TrayWidget::TrayWidget(QObject *parent)
     }
 
     connect(this, &QSystemTrayIcon::activated,
-        [this](QSystemTrayIcon::ActivationReason reason) {
-            QAction *requestedAction = nullptr;
+            [this](QSystemTrayIcon::ActivationReason reason) {
+        QAction *requestedAction = nullptr;
 
-            switch (reason) {
-                case DoubleClick:
-                case Trigger:
-                    requestedAction = m_radioMenu->exec(QCursor::pos());
-                    break;
-                default:
-                    break;
-            }
+        switch (reason) {
+        case DoubleClick:
+        case Trigger:
+            requestedAction = m_radioMenu->exec(QCursor::pos());
+            break;
+        default:
+            break;
+        }
     });
 
     connect(&m_timer, &QTimer::timeout, this, &TrayWidget::updateTooltip);
@@ -129,4 +126,3 @@ void TrayWidget::updateTooltip()
 
     setToolTip(text);
 }
-

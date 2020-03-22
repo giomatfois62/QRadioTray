@@ -37,6 +37,7 @@ else()
     main.cpp
     traywidget.cpp
     traywidget.h
+    resources.qrc
   )
 endif()
 
