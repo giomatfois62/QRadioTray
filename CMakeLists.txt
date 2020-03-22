@@ -27,17 +27,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt5 COMPONENTS Widgets Multimedia REQUIRED)
 
 if(ANDROID)
-  add_library(QTrayIcon SHARED
+  add_library(QRadioTray SHARED
     main.cpp
     traywidget.cpp
     traywidget.h
   )
 else()
-  add_executable(QTrayIcon
+  add_executable(QRadioTray
     main.cpp
     traywidget.cpp
     traywidget.h
   )
 endif()
 
-target_link_libraries(QTrayIcon PRIVATE Qt5::Widgets Qt5::Multimedia)
+target_link_libraries(QRadioTray PRIVATE Qt5::Widgets Qt5::Multimedia)
