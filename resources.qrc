@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/icons">
-        <file>Radio-icon-black.png</file>
-        <file>Radio-icon-white.png</file>
+        <file>radio.png</file>
     </qresource>
 </RCC>

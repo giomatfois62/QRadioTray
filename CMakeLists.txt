@@ -30,13 +30,13 @@ if(ANDROID)
   add_library(QRadioTray SHARED
     main.cpp
     traywidget.cpp
-    traywidget.h
+    configdialog.cpp
   )
 else()
   add_executable(QRadioTray
     main.cpp
     traywidget.cpp
-    traywidget.h
+    configdialog.cpp
     resources.qrc
   )
 endif()

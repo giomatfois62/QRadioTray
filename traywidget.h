@@ -19,14 +19,19 @@ class TrayWidget : public QSystemTrayIcon
 		TrayWidget(QObject *parent = nullptr);
 		~TrayWidget();
 		
-		void play(const QString &url);
-		void pause();
-		
+        void setCurrentStation(const RadioStation &station);
 		void updateTooltip();
 
+private slots:
+        void onActivation(QSystemTrayIcon::ActivationReason reason);
+
 	private:
+        void createContextMenu();
+        void loadStations();
+
 		QMenu *m_contextMenu;
 		QMenu *m_radioMenu;
+
 		QMediaPlayer m_player;
 		QTimer m_timer;
 		QString m_currentSong;
