@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    a.setQuitOnLastWindowClosed(false);
+
     QCoreApplication::setApplicationName("QRadioTray");
 
     /* https://evileg.com/en/post/147/

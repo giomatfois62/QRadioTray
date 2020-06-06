@@ -15,7 +15,16 @@ public:
     explicit ConfigDialog(QWidget *parent = nullptr);
     ~ConfigDialog();
 
+public slots:
+    void on_add_clicked(bool checked = false);
+    void on_remove_clicked(bool checked = false);
+
+    void done(int res);
+
 private:
+    void loadStations();
+    void saveStations();
+
     Ui::ConfigDialog *ui;
 };
 

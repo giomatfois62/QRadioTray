@@ -1,4 +1,5 @@
 #include "traywidget.h"
+#include "configdialog.h"
 
 #include <QMenu>
 #include <QApplication>
@@ -29,7 +30,7 @@ static QVector<RadioStation> defaultStations = {
     {"Black Rock FM", "http://ice2.somafm.com/brfm-128-mp3"}
 };
 
-QString stationsFileName()
+static QString stationsFileName()
 {
     return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) +
             QDir::separator() + "radio.json";
@@ -120,6 +121,12 @@ void TrayWidget::createContextMenu()
 
     m_contextMenu->addAction(tr("Configure"), [this](bool) {
         qDebug() << "ConfigureMenu";
+
+        ConfigDialog dialog;
+        int res = dialog.exec();
+
+        if (res == QDialog::Accepted)
+            loadStations();
     });
 
     m_contextMenu->addSeparator();
