@@ -36,19 +36,22 @@ static QString stationsFileName()
             QDir::separator() + "radio.json";
 }
 
-TrayWidget::TrayWidget(QObject *parent) : 
+TrayWidget::TrayWidget(QObject *parent) :
 	QSystemTrayIcon(parent),
     m_radioMenu(new QMenu),
 	m_player(this, QMediaPlayer::StreamPlayback)
 {
-    setIcon(QIcon(":/icons/radio.png"));
 
-    createContextMenu();
+    QIcon icon = QIcon::fromTheme("audio-headphones", QIcon(":/icons/radio.png"));
+    QPixmap pixmap = icon.pixmap(QSize(22,22));
+    setIcon(QIcon(pixmap));
+
     loadStations();
+    createContextMenu();
 
     connect(this, &QSystemTrayIcon::activated, this, &TrayWidget::onActivation);
 	connect(&m_timer, &QTimer::timeout, this, &TrayWidget::updateTooltip);
-	
+
     m_timer.setInterval(1000);
 	m_timer.start();
 }
@@ -73,31 +76,31 @@ void TrayWidget::setCurrentStation(const RadioStation &station)
 void TrayWidget::updateTooltip()
 {
 	QString text;
-	
+
 	QString artist = m_player.metaData("AlbumArtist").toString();
 	QString album = m_player.metaData("AlbumTitle").toString();
 	QString title = m_player.metaData("Title").toString();
-	
+
 	if (!artist.isEmpty())
 		text.append(artist + " - ");
-	
+
 	if (!title.isEmpty())
 		text.append(title);
-	
+
 	if (!album.isEmpty())
 		text.append(" (" + album + + ")");
-	
+
 	if (title != m_currentSong) {
 		m_currentSong = title;
-	
+
 		if (!title.isEmpty())
-        		showMessage(m_currentStation.name, text, 
+        		showMessage(m_currentStation.name, text,
 			QSystemTrayIcon::Information, 5000);
 	}
-	
+
 	if (!artist.isEmpty() && !title.isEmpty())
 		text.append(artist + " - " + title);
-	
+
     setToolTip(text);
 }
 
@@ -119,17 +122,39 @@ void TrayWidget::createContextMenu()
 {
     m_contextMenu = new QMenu;
 
+    m_contextMenu->clear();
+
+    m_contextMenu->addAction(tr("Play/Pause"), [this](bool) {
+        if (m_player.state() == QMediaPlayer::PlayingState) {
+                m_player.stop();
+        } else if (m_player.state() == QMediaPlayer::StoppedState) {
+                m_player.play();
+        }
+    });
+
+    m_contextMenu->addSeparator();
+
+    for (auto &station : m_stations) {
+        m_contextMenu->addAction(station.name, [&](bool) {
+            setCurrentStation(station);
+        });
+    }
+
+    m_contextMenu->addSeparator();
+
     m_contextMenu->addAction(tr("Configure"), [this](bool) {
         qDebug() << "ConfigureMenu";
 
         ConfigDialog dialog;
         int res = dialog.exec();
 
-        if (res == QDialog::Accepted)
+        if (res == QDialog::Accepted) {
             loadStations();
+		createContextMenu();
+	}
     });
 
-    m_contextMenu->addSeparator();
+
 
     m_contextMenu->addAction(tr("About"), [](bool) {
         qDebug() << "About";
