@@ -42,9 +42,9 @@ TrayWidget::TrayWidget(QObject *parent) :
 	m_player(this, QMediaPlayer::StreamPlayback)
 {
 
-    QIcon icon = QIcon::fromTheme("audio-headphones", QIcon(":/icons/radio.png"));
-    QPixmap pixmap = icon.pixmap(QSize(22,22));
-    setIcon(QIcon(pixmap));
+    QIcon icon = QIcon::fromTheme("audio-headphones-symbolic", QIcon(":/icons/radio.png"));
+    //QPixmap pixmap = icon.pixmap(QSize(22,22));
+    setIcon(icon);
 
     loadStations();
     createContextMenu();
