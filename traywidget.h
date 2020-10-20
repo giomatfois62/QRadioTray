@@ -9,6 +9,7 @@
 struct RadioStation {
 	QString name;
 	QString url;
+	QStringList categories;
 };
 
 class TrayWidget : public QSystemTrayIcon
@@ -30,13 +31,13 @@ private slots:
         void loadStations();
 
 		QMenu *m_contextMenu;
-		QMenu *m_radioMenu;
-
 		QMediaPlayer m_player;
 		QTimer m_timer;
 		QString m_currentSong;
 		QVector<RadioStation> m_stations;
 		RadioStation m_currentStation;
+		QAction *m_currentSongLabel;
+		QAction *m_controlButton;
 };
 
 #endif // TRAYWIDGET_H

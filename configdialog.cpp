@@ -32,7 +32,7 @@ ConfigDialog::~ConfigDialog()
 
 void ConfigDialog::on_add_clicked(bool)
 {
-    QString name, url;
+    QString name, url, categories;
 
     name = QInputDialog::getText(this, "Station Name",
         "Name:", QLineEdit::Normal, "");
@@ -46,11 +46,15 @@ void ConfigDialog::on_add_clicked(bool)
     if (url.isEmpty())
         return;
 
+	categories = QInputDialog::getText(this, "Station Genre",
+        "Genre:", QLineEdit::Normal, "");
+
     int current = ui->stations->rowCount();
 
     ui->stations->setRowCount(current + 1);
     ui->stations->setItem(current, 0, new QTableWidgetItem(name));
-    ui->stations->setItem(current, 1, new QTableWidgetItem(url));
+    ui->stations->setItem(current, 1, new QTableWidgetItem(categories));
+	ui->stations->setItem(current, 2, new QTableWidgetItem(url));
 }
 
 void ConfigDialog::on_remove_clicked(bool)
@@ -91,10 +95,12 @@ void ConfigDialog::loadStations()
 
         QString name = object["name"].toString();
         QString url = object["url"].toString();
+		QString categories = object["categories"].toString();
 
         ui->stations->setRowCount(current + 1);
         ui->stations->setItem(current, 0, new QTableWidgetItem(name));
-        ui->stations->setItem(current, 1, new QTableWidgetItem(url));
+        ui->stations->setItem(current, 2, new QTableWidgetItem(url));
+		ui->stations->setItem(current, 1, new QTableWidgetItem(categories));
 
         current++;
     }
@@ -112,7 +118,8 @@ void ConfigDialog::saveStations()
     for (int i = 0; i < ui->stations->rowCount(); ++i) {
         QJsonObject object;
         object["name"] = ui->stations->item(i,0)->text();
-        object["url"] = ui->stations->item(i,1)->text();
+        object["url"] = ui->stations->item(i,2)->text();
+		object["categories"] = ui->stations->item(i,1)->text();
 
         array.push_back(object);
     }
