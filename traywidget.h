@@ -5,39 +5,76 @@
 #include <QSystemTrayIcon>
 #include <QMediaPlayer>
 #include <QTimer>
+#include <QMenu>
 
 struct RadioStation {
-	QString name;
-	QString url;
-	QStringList categories;
+    QString name;
+    QString url;
+    QStringList categories;
+
+    bool operator==(const RadioStation &other) const {
+        return url == other.url;
+    }
+
+    void operator=(const RadioStation &other) {
+        url = other.url;
+        name = other.name;
+        categories = other.categories;
+    }
 };
 
-class TrayWidget : public QSystemTrayIcon
-{
-	Q_OBJECT
+struct Song {
+    QString artist;
+    QString title;
 
-	public:
-		TrayWidget(QObject *parent = nullptr);
-		~TrayWidget();
-		
-        void setCurrentStation(const RadioStation &station);
-		void updateTooltip();
+    bool operator==(const Song &other) const {
+        return title == other.title;
+    }
+
+    void operator=(const Song &other) {
+        title = other.title;
+        artist = other.artist;
+    }
+};
+
+class RadioWidget : public QSystemTrayIcon
+{
+    Q_OBJECT
+
+public:
+    RadioWidget(QObject *parent = nullptr);
+    ~RadioWidget();
+
+    void setCurrentStation(const RadioStation &station);
+    RadioStation currentStation();
+
+    void configure();
+
+signals:
+    void currentStationChanged(RadioStation station);
+    void currentSongChanged(Song song);
 
 private slots:
-        void onActivation(QSystemTrayIcon::ActivationReason reason);
+    void onActivation(QSystemTrayIcon::ActivationReason reason);
+    void onPlayClicked(bool);
+    void copyToClipboard(bool);
 
-	private:
-        void createContextMenu();
-        void loadStations();
+private:
+    void createMenu();
+    void loadStations();
+    void updateTooltip();
+    void setCurrentSong(const Song &song);
+    void createDefaultStationsFile();
 
-		QMenu *m_contextMenu;
-		QMediaPlayer m_player;
-		QTimer m_timer;
-		QString m_currentSong;
-		QVector<RadioStation> m_stations;
-		RadioStation m_currentStation;
-		QAction *m_currentSongLabel;
-		QAction *m_controlButton;
+    QMenu m_menu;
+    QAction m_currentSongLabel;
+    QAction m_playButton;
+
+    QMediaPlayer m_player;
+    QTimer m_tooltipTimer;
+    QVector<RadioStation> m_stations;
+    Song m_currentSong;
+    RadioStation m_currentStation;
 };
 
 #endif // TRAYWIDGET_H

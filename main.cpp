@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TrayWidget w;
+    RadioWidget w;
     w.show();
 
     return a.exec();

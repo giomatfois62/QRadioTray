@@ -12,7 +12,6 @@
 #include <QJsonObject>
 #include <QClipboard>
 #include <QToolTip>
-#include <QDebug>
 
 static QVector<RadioStation> defaultStations = {
     {"Groove Salad", "http://ice4.somafm.com/groovesalad-128-mp3", {"chill"}},
@@ -38,200 +37,193 @@ static QString stationsFileName()
             QDir::separator() + "radio.json";
 }
 
-TrayWidget::TrayWidget(QObject *parent) :
-	QSystemTrayIcon(parent),
-    m_contextMenu(nullptr),
-	m_player(this, QMediaPlayer::StreamPlayback),
-	m_currentSongLabel(nullptr),
-	m_controlButton(nullptr)
+RadioWidget::RadioWidget(QObject *parent) :
+    QSystemTrayIcon(parent),
+    m_player(this, QMediaPlayer::StreamPlayback)
 {
-
-    QIcon icon = QIcon::fromTheme("audio-headphones-symbolic", QIcon(":/icons/radio.png"));
-    //QPixmap pixmap = icon.pixmap(QSize(22,22));
-    setIcon(icon);
+    setIcon(QIcon::fromTheme("audio-headphones-symbolic",
+                             QIcon(":/icons/radio.png")));
 
     loadStations();
-    createContextMenu();
+    createMenu();
 
-    connect(this, &QSystemTrayIcon::activated, this, &TrayWidget::onActivation);
-	connect(&m_timer, &QTimer::timeout, this, &TrayWidget::updateTooltip);
+    connect(this, &QSystemTrayIcon::activated, this, &RadioWidget::onActivation);
+    connect(this, &RadioWidget::currentStationChanged, this, &RadioWidget::updateTooltip);
+    connect(&m_tooltipTimer, &QTimer::timeout, this, &RadioWidget::updateTooltip);
+    connect(&m_playButton, &QAction::triggered, this, &RadioWidget::onPlayClicked);
+    connect(&m_currentSongLabel, &QAction::triggered, this, &RadioWidget::copyToClipboard);
 
-    m_timer.setInterval(1000);
-	m_timer.start();
+    m_tooltipTimer.setInterval(1000);
+    m_tooltipTimer.start();
 }
 
-TrayWidget::~TrayWidget()
+RadioWidget::~RadioWidget()
 {
-    delete m_contextMenu;
+
 }
 
-void TrayWidget::setCurrentStation(const RadioStation &station)
+void RadioWidget::setCurrentStation(const RadioStation &station)
 {
+    if (station == m_currentStation)
+        return;
+
     m_currentStation = station;
 
     m_player.setMedia(QUrl(station.url));
     m_player.setVolume(100);
     m_player.play();
 
-	m_controlButton->setText("Pause " + station.name);
+    m_playButton.setText(tr("Pause ") + station.name);
 
-    QTimer::singleShot(5000, this, &TrayWidget::updateTooltip);
+    emit currentStationChanged(station);
 }
 
-void TrayWidget::updateTooltip()
+void RadioWidget::configure()
 {
-	QString text;
+    ConfigDialog dialog;
+    int res = dialog.exec();
 
-	QString artist = m_player.metaData("AlbumArtist").toString();
-	QString album = m_player.metaData("AlbumTitle").toString();
-	QString title = m_player.metaData("Title").toString();
-
-	if (!artist.isEmpty())
-		text.append(artist + " - ");
-
-	if (!title.isEmpty())
-		text.append(title);
-
-	if (!album.isEmpty())
-		text.append(" (" + album + + ")");
-
-	if (title != m_currentSong) {
-		m_currentSong = title;
-
-		if (!title.isEmpty())
-        		showMessage(m_currentStation.name, text,
-			QSystemTrayIcon::Information, 5000);
-	}
-
-	if (!artist.isEmpty() && !title.isEmpty())
-		text.append(artist + " - " + title);
-
-    setToolTip(text);
-
-	m_currentSongLabel->setText(text);
+    if (res == QDialog::Accepted) {
+        loadStations();
+        createMenu();
+    }
 }
 
-void TrayWidget::onActivation(QSystemTrayIcon::ActivationReason reason)
+void RadioWidget::updateTooltip()
 {
-    //QAction *requestedAction = nullptr;
+    QString artist = m_player.metaData("AlbumArtist").toString();
+    QString title = m_player.metaData("Title").toString();
 
+    Song song = {.artist = artist, .title = title};
+
+    setCurrentSong(song);
+}
+
+void RadioWidget::setCurrentSong(const Song &song)
+{
+    if (song == m_currentSong)
+        return;
+
+    m_currentSong = song;
+
+    QString text;
+
+    if (!song.title.isEmpty()) {
+
+        if (!song.artist.isEmpty())
+            text = QString("%1 - ").arg(song.artist);
+
+        text += song.title;
+
+        showMessage(m_currentStation.name, text, QSystemTrayIcon::Information, 5000);
+        m_currentSongLabel.setText(text);
+        setToolTip(text);
+    }
+
+    emit currentSongChanged(song);
+}
+
+void RadioWidget::createDefaultStationsFile()
+{
+    QDir().mkpath(QFileInfo(stationsFileName()).absolutePath());
+
+    QFile stationsFile(stationsFileName());
+    stationsFile.open(QIODevice::WriteOnly | QIODevice::Text);
+
+    // save default list
+    QJsonArray array;
+
+    for (auto &station : defaultStations) {
+        QJsonObject object;
+        object["name"] = station.name;
+        object["url"] = station.url;
+        object["categories"] = station.categories.join(";");
+
+        array.push_back(object);
+    }
+
+    stationsFile.write(QJsonDocument(array).toJson());
+    stationsFile.close();
+}
+
+void RadioWidget::onActivation(QSystemTrayIcon::ActivationReason reason)
+{
     switch (reason) {
-        case DoubleClick:
-        case Trigger:
-                //requestedAction = m_radioMenu->exec(QCursor::pos());
-                break;
-        default:
-                break;
+    case Trigger:
+        m_menu.exec(QCursor::pos() + QPoint(0,10));
+        break;
+    default:
+        break;
     }
 }
 
-void TrayWidget::createContextMenu()
+void RadioWidget::onPlayClicked(bool)
 {
-    if (m_contextMenu)
-        delete m_contextMenu;
+    if (m_player.state() == QMediaPlayer::PlayingState) {
+        m_player.stop();
 
-    m_contextMenu = new QMenu;
+        m_playButton.setText(tr("Play ") + m_currentStation.name);
+    } else if (m_player.state() == QMediaPlayer::StoppedState) {
+        m_player.play();
 
-    m_contextMenu->clear();
-
-	if (m_controlButton)
-        delete m_controlButton;
-	m_controlButton = new QAction("No station");
-	connect(m_controlButton, &QAction::triggered, [&](bool) {
-			        if (m_player.state() == QMediaPlayer::PlayingState) {
-							m_player.stop();
-
-							m_controlButton->setText("Play " + m_currentStation.name);
-					} else if (m_player.state() == QMediaPlayer::StoppedState) {
-							m_player.play();
-							if (!m_currentStation.name.isEmpty())
-								m_controlButton->setText("Pause " + m_currentStation.name);
-					}
-			});
-	m_contextMenu->addAction(m_controlButton);
-
-	if (m_currentSongLabel)
-        delete m_currentSongLabel;
-	m_currentSongLabel = new QAction("No song");
-	connect(m_currentSongLabel, &QAction::triggered, [&](bool) {
-            	
-				//QToolTip::showText(QPoint(0,0), QString("copied to clipboard"), nullptr, QRect(), 3000);
-
-				QClipboard *clipboard = QGuiApplication::clipboard();
-				if (!m_currentSongLabel->text().isEmpty())
-					clipboard->setText(m_currentSongLabel->text());
-			});
-	m_contextMenu->addAction(m_currentSongLabel);
-
-    m_contextMenu->addSeparator();
-
-	QStringList categories;
-	QMap<QString, QMenu*> menus;
-
-	for (auto &station : m_stations)
-		for (auto &category : station.categories)
-			if (!categories.contains(category, Qt::CaseSensitive)) {
-				categories << category;
-			}
-
-	for (auto &category : categories)
-		menus[category] = new QMenu(category);
-
-	for (auto &station : m_stations) {
-		for (auto &category : station.categories)
-			menus[category]->addAction(station.name, [&](bool) {
-            	setCurrentStation(station);
-			});
-	}	
-
-    for (auto &menu : menus.values()) {
-		m_contextMenu->addMenu(menu);
+        if (!m_currentStation.name.isEmpty())
+            m_playButton.setText(tr("Pause ") + m_currentStation.name);
     }
-
-    m_contextMenu->addSeparator();
-
-    m_contextMenu->addAction(tr("Configure"), [this](bool) {
-        qDebug() << "ConfigureMenu";
-
-        ConfigDialog dialog;
-        int res = dialog.exec();
-
-        if (res == QDialog::Accepted) {
-            loadStations();
-            createContextMenu();
-        }
-    });
-
-    m_contextMenu->addAction(tr("Exit"), [](bool) {
-        QApplication::quit();
-    });
-
-    setContextMenu(m_contextMenu);
 }
 
-void TrayWidget::loadStations()
+void RadioWidget::copyToClipboard(bool)
+{
+    QClipboard *clipboard = QGuiApplication::clipboard();
+
+    if (!m_currentSongLabel.text().isEmpty())
+        clipboard->setText(m_currentSongLabel.text());
+}
+
+void RadioWidget::createMenu()
+{
+    m_menu.clear();
+
+    m_playButton.setText(tr("No station"));
+    m_menu.addAction(&m_playButton);
+
+    m_currentSongLabel.setText(tr("No song"));
+    m_menu.addAction(&m_currentSongLabel);
+
+    m_menu.addSeparator();
+
+    QStringList categories;
+    QMap<QString, QMenu*> submenus;
+
+    for (auto &station : m_stations)
+        for (auto &category : station.categories)
+            if (!categories.contains(category, Qt::CaseSensitive))
+                categories << category;
+
+    for (auto &category : categories)
+        submenus[category] = m_menu.addMenu(category);
+
+    for (auto &station : m_stations) {
+        for (auto &category : station.categories) {
+            submenus[category]->addAction(station.name, [=](bool) {
+                setCurrentStation(station);
+            });
+        }
+    }
+
+    m_menu.addSeparator();
+
+    m_menu.addAction(tr("Configure"), [this](bool) { configure(); });
+    m_menu.addAction(tr("Exit"), [](bool) { QApplication::quit(); });
+
+    setContextMenu(&m_menu);
+}
+
+void RadioWidget::loadStations()
 {
     QFile stationsFile(stationsFileName());
 
     if (!stationsFile.exists()) {
-        QDir().mkpath(QFileInfo(stationsFileName()).absolutePath());
-
-        stationsFile.open(QIODevice::WriteOnly | QIODevice::Text);
-
-        // save default list
-        QJsonArray array;
-
-        for (auto &station : defaultStations) {
-            QJsonObject object;
-            object["name"] = station.name;
-            object["url"] = station.url;
-			object["categories"] = station.categories.join(";");
-
-            array.push_back(object);
-        }
-
-        stationsFile.write(QJsonDocument(array).toJson());
-        stationsFile.close();
+        createDefaultStationsFile();
     }
 
     stationsFile.open(QIODevice::ReadOnly | QIODevice::Text);
@@ -239,6 +231,8 @@ void TrayWidget::loadStations()
     QJsonArray array = QJsonDocument::fromJson(jsonString.toUtf8()).array();
 
     m_stations.clear();
+    m_currentStation = {};
+    m_currentSong = {};
 
     for (auto element : array) {
         QJsonObject object = element.toObject();
@@ -246,11 +240,9 @@ void TrayWidget::loadStations()
         RadioStation station;
         station.name = object["name"].toString();
         station.url = object["url"].toString();
-		station.categories = object["categories"].toString().split(";");
-
-        qDebug() << "   " << station.name << " - " << station.url << " - " << station.categories; 
+        station.categories = object["categories"].toString().split(";");
 
         if (!station.name.isEmpty() && !station.url.isEmpty())
-                m_stations.push_back(station);
+            m_stations.push_back(station);
     }
 }
