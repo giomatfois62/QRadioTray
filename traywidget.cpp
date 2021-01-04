@@ -136,8 +136,8 @@ void RadioWidget::createDefaultStationsFile()
     for (auto &station : defaultStations) {
         QJsonObject object;
         object["name"] = station.name;
-        object["url"] = station.url;
-        object["categories"] = station.categories.join(";");
+        object["url_resolved"] = station.url;
+        object["tags"] = station.categories.join(",");
 
         array.push_back(object);
     }
@@ -190,10 +190,17 @@ void RadioWidget::createMenu()
     m_menu.addAction(&m_currentSongLabel);
 
     m_menu.addSeparator();
+    
+    for (auto &station : m_stations) {
+        m_menu.addAction(station.name, [=](bool) {
+            setCurrentStation(station);
+        });
+    }
 
+    /* 
     QStringList categories;
     QMap<QString, QMenu*> submenus;
-
+    
     for (auto &station : m_stations)
         for (auto &category : station.categories)
             if (!categories.contains(category, Qt::CaseSensitive))
@@ -209,6 +216,7 @@ void RadioWidget::createMenu()
             });
         }
     }
+    */
 
     m_menu.addSeparator();
 
@@ -239,8 +247,8 @@ void RadioWidget::loadStations()
 
         RadioStation station;
         station.name = object["name"].toString();
-        station.url = object["url"].toString();
-        station.categories = object["categories"].toString().split(";");
+        station.url = object["url_resolved"].toString();
+        station.categories = object["tags"].toString().split(",");
 
         if (!station.name.isEmpty() && !station.url.isEmpty())
             m_stations.push_back(station);
