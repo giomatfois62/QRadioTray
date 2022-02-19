@@ -150,7 +150,17 @@ void RadioWidget::onActivation(QSystemTrayIcon::ActivationReason reason)
 {
     switch (reason) {
     case Trigger:
-        m_menu.exec(QCursor::pos() + QPoint(0,10));
+        //m_menu.exec(QCursor::pos() + QPoint(0,10));
+        if (m_player.state() == QMediaPlayer::PlayingState) {
+            m_player.stop();
+
+            m_playButton.setText(tr("Play ") + m_currentStation.name);
+        } else if (m_player.state() == QMediaPlayer::StoppedState) {
+            m_player.play();
+
+            if (!m_currentStation.name.isEmpty())
+                m_playButton.setText(tr("Pause ") + m_currentStation.name);
+        }
         break;
     default:
         break;
